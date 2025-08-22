@@ -1,0 +1,7 @@
+[install]
+# 使用Bun的包管理器
+packageManager = "bun"
+
+[test]
+# 测试配置
+preload = ["./src/test-setup.ts"]

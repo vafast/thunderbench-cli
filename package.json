@@ -1,0 +1,51 @@
+{
+  "name": "thunderbench-cli",
+  "version": "1.0.1",
+  "description": "ThunderBench CLI - 高性能API性能测试工具命令行界面",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "thunderbench": "dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "bun build src/cli.ts --outdir ./dist --target node",
+    "dev": "bun --watch src/cli.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cli",
+    "performance",
+    "benchmark",
+    "api-testing",
+    "wrk",
+    "load-testing",
+    "stress-testing"
+  ],
+  "author": "ThunderBench Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thunderbench/thunderbench-cli.git"
+  },
+  "homepage": "https://github.com/thunderbench/thunderbench-cli#readme",
+  "bugs": {
+    "url": "https://github.com/thunderbench/thunderbench-cli/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "commander": "^11.1.0",
+    "thunderbench-core": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "bun-types": "latest",
+    "typescript": "^5.3.0"
+  }
+}
