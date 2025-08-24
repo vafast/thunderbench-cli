@@ -16,10 +16,10 @@
     "build": "bun build src/cli.ts --outdir ./dist --target node",
     "dev": "bun --watch src/cli.ts",
     "prepublishOnly": "npm run build",
-    "release": "bumpp && bun publish",
-    "release:patch": "bumpp patch",
-    "release:minor": "bumpp minor",
-    "release:major": "bumpp major"
+    "release": "bun run build && bumpp && bun publish",
+    "release:patch": "bun run build && bumpp patch",
+    "release:minor": "bun run build && bumpp minor",
+    "release:major": "bun run build && bumpp major"
   },
   "keywords": [
     "cli",
