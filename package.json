@@ -16,7 +16,7 @@
     "build": "bun build src/cli.ts --outdir ./dist --target node",
     "dev": "bun --watch src/cli.ts",
     "prepublishOnly": "npm run build",
-    "release": "bumpp",
+    "release": "bumpp && bun publish",
     "release:patch": "bumpp patch",
     "release:minor": "bumpp minor",
     "release:major": "bumpp major"
@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "commander": "^11.1.0",
-    "thunderbench-core": "^1.0.3"
+    "thunderbench": "^1.0.7"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

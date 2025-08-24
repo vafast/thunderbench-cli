@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { TestEngine, validateConfig, BenchmarkConfig } from "thunderbench-core";
+import { TestEngine, validateConfig, BenchmarkConfig } from "thunderbench";
 import chalk from "chalk";
 import ora from "ora";
 import path from "path";
