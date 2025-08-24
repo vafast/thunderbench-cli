@@ -15,7 +15,11 @@
   "scripts": {
     "build": "bun build src/cli.ts --outdir ./dist --target node",
     "dev": "bun --watch src/cli.ts",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "release": "bumpp",
+    "release:patch": "bumpp patch",
+    "release:minor": "bumpp minor",
+    "release:major": "bumpp major"
   },
   "keywords": [
     "cli",
@@ -45,6 +49,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "bumpp": "^10.2.3",
     "bun-types": "latest",
     "typescript": "^5.3.0"
   }
