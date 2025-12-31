@@ -1,7 +1,7 @@
 {
   "name": "thunderbench-cli",
-  "version": "1.0.2",
-  "description": "ThunderBench CLI - 高性能API性能测试工具命令行界面",
+  "version": "1.1.0",
+  "description": "ThunderBench CLI - 高性能API性能测试工具命令行界面，支持框架对比测试",
   "type": "module",
   "main": "dist/cli.js",
   "bin": {

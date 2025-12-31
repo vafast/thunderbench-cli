@@ -1,4 +1,10 @@
-export default {
+/**
+ * 示例性能测试配置
+ */
+
+import type { BenchmarkConfig } from "thunderbench";
+
+const config: BenchmarkConfig = {
   name: "示例性能测试",
   description: "这是一个示例配置文件",
   groups: [
@@ -7,8 +13,8 @@ export default {
       http: {
         baseUrl: "http://localhost:3002",
         headers: {
-          "User-Agent": "thunderbench/1.0"
-        }
+          "User-Agent": "thunderbench/1.0",
+        },
       },
       threads: 2,
       connections: 50,
@@ -21,11 +27,14 @@ export default {
           name: "GET 请求测试",
           request: {
             method: "GET",
-            url: "/api/test"
+            url: "/api/test",
           },
-          weight: 100
-        }
-      ]
-    }
-  ]
+          weight: 100,
+        },
+      ],
+    },
+  ],
 };
+
+export default config;
+

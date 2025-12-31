@@ -1,7 +1,15 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { TestEngine, validateConfig, BenchmarkConfig } from "thunderbench";
+import {
+  TestEngine,
+  validateConfig,
+  BenchmarkConfig,
+  runComparison,
+  generateComparisonReport,
+  ServerConfig,
+  ComparisonTestConfig,
+} from "thunderbench";
 import chalk from "chalk";
 import ora from "ora";
 import path from "path";
@@ -12,8 +20,15 @@ const program = new Command();
 program
   .name("thunderbench")
   .description("高性能API性能测试工具，基于WRK引擎")
-  .version("1.0.0")
-  .option("-c, --config <path>", "配置文件路径", "./examples/test-config.js")
+  .version("1.1.0");
+
+// ============================================================
+// 主命令: 运行单个测试
+// ============================================================
+program
+  .command("run", { isDefault: true })
+  .description("运行性能测试")
+  .option("-c, --config <path>", "配置文件路径", "./test-config.js")
   .option("-v, --verbose", "详细输出模式")
   .option("--no-report", "不生成报告文件")
   .option("--no-progress", "不显示实时进度")
@@ -21,42 +36,66 @@ program
   .option("--timeout <ms>", "全局超时时间(毫秒)", "30000")
   .option("--concurrent <number>", "全局并发数覆盖", "10")
   .option("--dry-run", "仅验证配置，不执行测试")
-  .option("--list-examples", "列出示例配置文件")
-  .option("--create-example", "创建示例配置文件")
-  .option("--cleanup-wrk", "测试完成后清理 wrk 脚本文件");
+  .option("--cleanup-wrk", "测试完成后清理 wrk 脚本文件")
+  .action(runBenchmark);
+
+// ============================================================
+// 对比命令: 框架对比测试
+// ============================================================
+program
+  .command("compare")
+  .description("运行框架对比测试")
+  .requiredOption("-c, --config <path>", "对比测试配置文件路径")
+  .option("-o, --output <dir>", "报告输出目录", "./comparison-reports")
+  .option("-v, --verbose", "详细输出模式")
+  .option("--format <formats>", "报告格式 (markdown,json)", "markdown,json")
+  .action(runComparisonTest);
+
+// ============================================================
+// 工具命令
+// ============================================================
+program
+  .command("create-config")
+  .description("创建示例配置文件")
+  .option("--type <type>", "配置类型 (single, comparison)", "single")
+  .action(createExampleConfig);
+
+program
+  .command("validate")
+  .description("验证配置文件")
+  .requiredOption("-c, --config <path>", "配置文件路径")
+  .action(validateConfigFile);
 
 program.parse();
 
-const options = program.opts();
+// ============================================================
+// 命令实现
+// ============================================================
 
-async function main() {
+async function runBenchmark(options: {
+  config: string;
+  verbose?: boolean;
+  report?: boolean;
+  progress?: boolean;
+  output: string;
+  timeout: string;
+  concurrent: string;
+  dryRun?: boolean;
+  cleanupWrk?: boolean;
+}) {
   try {
-    // 显示欢迎信息
     console.log(chalk.blue.bold("\nThunderBench - 高性能API性能测试工具"));
-    console.log(chalk.gray("版本 1.0.0 | 基于内置 WRK 引擎\n"));
+    console.log(chalk.gray("版本 1.1.0 | 基于内置 WRK 引擎\n"));
 
-    // 处理特殊选项
-    if (options.listExamples) {
-      await listExamples();
-      return;
-    }
-
-    if (options.createExample) {
-      await createExampleConfig();
-      return;
-    }
-
-    // 验证配置文件
     const configPath = path.resolve(options.config);
     console.log(chalk.blue(`配置文件: ${configPath}`));
 
     if (!(await fileExists(configPath))) {
       console.error(chalk.red(`配置文件不存在: ${configPath}`));
-      console.log(chalk.yellow("使用 --create-example 创建示例配置文件"));
+      console.log(chalk.yellow("使用 'thunderbench create-config' 创建示例配置文件"));
       process.exit(1);
     }
 
-    // 加载配置
     const spinner = ora("加载配置文件...").start();
     let config: BenchmarkConfig;
 
@@ -73,19 +112,17 @@ async function main() {
     // 应用全局选项覆盖
     if (options.timeout) {
       const timeout = parseInt(options.timeout);
-      config.groups.forEach((group: any) => {
+      config.groups.forEach((group) => {
         if (group.http) {
           group.http.timeout = timeout;
         }
       });
-      console.log(chalk.yellow(`全局超时时间设置为: ${timeout}ms`));
     }
 
     if (options.concurrent && options.concurrent !== "10") {
       const concurrent = parseInt(options.concurrent);
-      config.groups.forEach((group: any) => {
-        // 将全局并发数转换为线程数和连接数
-        group.threads = Math.min(12, Math.ceil(concurrent / 10)); // 每线程最多10个连接
+      config.groups.forEach((group) => {
+        group.threads = Math.min(12, Math.ceil(concurrent / 10));
         group.connections = concurrent;
       });
       console.log(chalk.yellow(`全局并发数设置为: ${concurrent}`));
@@ -114,9 +151,8 @@ async function main() {
 
     // 运行测试
     console.log(chalk.blue("\n开始 WRK 基准测试..."));
-    const result = await engine.runBenchmark();
+    await engine.runBenchmark();
 
-    // 显示结果
     console.log(chalk.green("\n✅ 测试完成！"));
     console.log(chalk.blue(`报告已保存到: ${options.output}`));
   } catch (error) {
@@ -125,18 +161,84 @@ async function main() {
   }
 }
 
-async function listExamples() {
-  console.log(chalk.blue("\n📚 可用的示例配置文件:"));
-  console.log(chalk.gray("examples/simple-wrk-config.js - 简单配置示例"));
-  console.log(chalk.gray("examples/complex-config.ts - 复杂配置示例"));
-  console.log(chalk.gray("examples/parallel-test.ts - 并行测试示例"));
-  console.log(chalk.gray("examples/serial-vs-parallel-demo.ts - 串行vs并行对比"));
+async function runComparisonTest(options: {
+  config: string;
+  output: string;
+  verbose?: boolean;
+  format: string;
+}) {
+  try {
+    console.log(chalk.blue.bold("\nThunderBench - 框架对比测试"));
+    console.log(chalk.gray("版本 1.1.0 | 支持多框架自动对比\n"));
+
+    const configPath = path.resolve(options.config);
+    console.log(chalk.blue(`配置文件: ${configPath}`));
+
+    if (!(await fileExists(configPath))) {
+      console.error(chalk.red(`配置文件不存在: ${configPath}`));
+      console.log(chalk.yellow("使用 'thunderbench create-config --type comparison' 创建示例配置文件"));
+      process.exit(1);
+    }
+
+    const spinner = ora("加载对比测试配置...").start();
+    let comparisonConfig: {
+      servers: ServerConfig[];
+      testConfig: ComparisonTestConfig;
+    };
+
+    try {
+      const configModule = await import(configPath);
+      comparisonConfig = configModule.default || configModule;
+      spinner.succeed("配置加载成功");
+    } catch (error) {
+      spinner.fail("配置加载失败");
+      console.error(chalk.red("错误详情:"), error);
+      process.exit(1);
+    }
+
+    // 运行对比测试
+    const result = await runComparison(
+      comparisonConfig.servers,
+      comparisonConfig.testConfig,
+      {
+        outputDir: options.output,
+        verbose: options.verbose,
+      }
+    );
+
+    // 生成报告
+    const formats = options.format.split(",").map((f) => f.trim()) as ("markdown" | "json")[];
+    const reportFiles = await generateComparisonReport(result, {
+      outputDir: options.output,
+      formats,
+    });
+
+    console.log(chalk.green("\n✅ 对比测试完成！"));
+    console.log(chalk.blue("报告文件:"));
+    reportFiles.forEach((file) => console.log(chalk.gray(`  - ${file}`)));
+  } catch (error) {
+    console.error(chalk.red("\n❌ 对比测试失败:"), error);
+    process.exit(1);
+  }
 }
 
-async function createExampleConfig() {
-  const exampleContent = `module.exports = {
-  name: "示例性能测试",
-  description: "这是一个示例配置文件",
+async function createExampleConfig(options: { type: string }) {
+  const type = options.type;
+
+  if (type === "comparison") {
+    await createComparisonConfigExample();
+  } else {
+    await createSingleConfigExample();
+  }
+}
+
+async function createSingleConfigExample() {
+  const exampleContent = `/**
+ * ThunderBench 性能测试配置
+ */
+module.exports = {
+  name: "API性能测试",
+  description: "测试 API 端点的性能表现",
   groups: [
     {
       name: "基础测试组",
@@ -146,34 +248,168 @@ async function createExampleConfig() {
           "User-Agent": "thunderbench/1.0"
         }
       },
-      threads: 2,
-      connections: 50,
-      duration: 10,
+      threads: 4,
+      connections: 100,
+      duration: 30,
       timeout: 5,
       latency: true,
       executionMode: "parallel",
       tests: [
         {
-          name: "GET 请求测试",
+          name: "健康检查",
           request: {
             method: "GET",
-            url: "/api/test"
+            url: "/health"
           },
-          weight: 100
+          weight: 30
+        },
+        {
+          name: "获取用户列表",
+          request: {
+            method: "GET",
+            url: "/api/users"
+          },
+          weight: 40
+        },
+        {
+          name: "创建用户",
+          request: {
+            method: "POST",
+            url: "/api/users",
+            body: { name: "Test User", email: "test@example.com" }
+          },
+          weight: 30
         }
       ]
     }
   ]
 };`;
 
-  const configPath = "./test-config.js";
+  const configPath = "./thunderbench.config.js";
   try {
     await fs.writeFile(configPath, exampleContent);
     console.log(chalk.green(`✅ 示例配置文件已创建: ${configPath}`));
-    console.log(chalk.blue("现在可以使用以下命令运行测试:"));
-    console.log(chalk.gray(`thunderbench --config ${configPath}`));
+    console.log(chalk.blue("运行测试:"));
+    console.log(chalk.gray(`  thunderbench run --config ${configPath}`));
   } catch (error) {
-    console.error(chalk.red("❌ 创建示例配置文件失败:"), error);
+    console.error(chalk.red("❌ 创建配置文件失败:"), error);
+  }
+}
+
+async function createComparisonConfigExample() {
+  const exampleContent = `/**
+ * ThunderBench 框架对比测试配置
+ */
+
+/** @type {import('thunderbench').ServerConfig[]} */
+const servers = [
+  {
+    name: "Framework-A",
+    command: "bun",
+    args: ["run", "server-a.ts"],
+    port: 3001,
+    healthCheckPath: "/health",
+    startupTimeout: 10000,
+    warmupRequests: 100,
+  },
+  {
+    name: "Framework-B",
+    command: "bun",
+    args: ["run", "server-b.ts"],
+    port: 3002,
+    healthCheckPath: "/health",
+    startupTimeout: 10000,
+    warmupRequests: 100,
+  },
+];
+
+/** @type {import('thunderbench').ComparisonTestConfig} */
+const testConfig = {
+  name: "框架性能对比",
+  description: "对比多个 Web 框架的性能",
+  threads: 4,
+  connections: 100,
+  duration: 30,
+  scenarios: [
+    {
+      name: "Hello World",
+      method: "GET",
+      path: "/",
+      weight: 40,
+    },
+    {
+      name: "JSON API",
+      method: "GET",
+      path: "/api/users",
+      weight: 30,
+    },
+    {
+      name: "动态路由",
+      method: "GET",
+      path: "/api/users/123",
+      weight: 20,
+    },
+    {
+      name: "POST 请求",
+      method: "POST",
+      path: "/api/users",
+      headers: { "Content-Type": "application/json" },
+      body: { name: "Test", email: "test@test.com" },
+      weight: 10,
+    },
+  ],
+};
+
+module.exports = { servers, testConfig };
+`;
+
+  const configPath = "./comparison.config.js";
+  try {
+    await fs.writeFile(configPath, exampleContent);
+    console.log(chalk.green(`✅ 对比测试配置文件已创建: ${configPath}`));
+    console.log(chalk.blue("运行对比测试:"));
+    console.log(chalk.gray(`  thunderbench compare --config ${configPath}`));
+  } catch (error) {
+    console.error(chalk.red("❌ 创建配置文件失败:"), error);
+  }
+}
+
+async function validateConfigFile(options: { config: string }) {
+  try {
+    const configPath = path.resolve(options.config);
+
+    if (!(await fileExists(configPath))) {
+      console.error(chalk.red(`配置文件不存在: ${configPath}`));
+      process.exit(1);
+    }
+
+    const spinner = ora("验证配置文件...").start();
+
+    try {
+      const configModule = await import(configPath);
+      const config = configModule.default || configModule.config || configModule;
+
+      // 判断是单个测试配置还是对比测试配置
+      if (config.groups) {
+        validateConfig(config);
+        spinner.succeed("单测试配置验证通过");
+      } else if (config.servers && config.testConfig) {
+        // 对比测试配置
+        spinner.succeed("对比测试配置格式正确");
+        console.log(chalk.blue(`  服务器数量: ${config.servers.length}`));
+        console.log(chalk.blue(`  测试场景: ${config.testConfig.scenarios?.length || 0}`));
+      } else {
+        spinner.fail("无法识别的配置格式");
+        process.exit(1);
+      }
+    } catch (error) {
+      spinner.fail("配置验证失败");
+      console.error(chalk.red("错误详情:"), error);
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error(chalk.red("❌ 验证失败:"), error);
+    process.exit(1);
   }
 }
 
@@ -185,5 +421,3 @@ async function fileExists(filePath: string): Promise<boolean> {
     return false;
   }
 }
-
-main();
