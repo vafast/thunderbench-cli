@@ -13,13 +13,9 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "bun build src/cli.ts --outdir ./dist --target node",
+    "build": "tsup src/cli.ts --outDir ./dist --format esm",
     "dev": "bun --watch src/cli.ts",
-    "prepublishOnly": "npm run build",
-    "release": "bun run build && bumpp && bun publish",
-    "release:patch": "bun run build && bumpp patch",
-    "release:minor": "bun run build && bumpp minor",
-    "release:major": "bun run build && bumpp major"
+    "release": "npx np --no-tests"
   },
   "keywords": [
     "cli",
