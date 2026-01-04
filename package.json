@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "tsup src/cli.ts --outDir ./dist --format esm",
-    "dev": "bun --watch src/cli.ts",
+    "dev": "npx tsx watch src/cli.ts",
     "release": "npx np --no-tests"
   },
   "keywords": [
