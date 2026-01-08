@@ -15,7 +15,7 @@ ThunderBench 命令行工具 - 高性能 API 性能测试工具
 ```bash
 npm install -g thunderbench-cli
 # 或
-bun add -g thunderbench-cli
+npm install -g thunderbench-cli
 ```
 
 ## 💻 使用方法
@@ -152,13 +152,13 @@ git clone https://github.com/thunderbench/thunderbench-cli.git
 cd thunderbench-cli
 
 # 安装依赖
-bun install
+npm install
 
 # 开发模式
-bun run dev
+npm run dev
 
 # 构建
-bun run build
+npm run build
 ```
 
 ## 📄 许可证
